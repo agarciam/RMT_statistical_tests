@@ -3,13 +3,14 @@
 """
 Created on Sat Dec 10 13:45:23 2022
 
-@author: andres
+@author: andres.garcia@cimat.mx
 """
 
 
 ### librerias
 import numpy as np
 from scipy.linalg import eigh
+from scipy import stats
 import pandas as pd
 import os
 
@@ -67,12 +68,8 @@ def axis(period, data):
         dates.append(index[k])     
     return(n, period, dates)
 
-#### Imputación de datos
-"""
- 1) Se eliminan las series de precios con mas de un cierto porcentaje de dias faltantes.
- 2) Las series restantes se imputan con splines de orden 3.
- 3) Se calculan retornos logartimicos
-"""
+#### Data imputation
+
 
 def imputation(close, ratio=1):
     df_dataset = close
@@ -107,7 +104,7 @@ def imputation(close, ratio=1):
     return(prices_dataset_imputed,returns_imputed)
 
 #######################################
-### Funciones de matrices aleatorias
+### Random matrix theory
 
 ### Marcenko-Pastur law
 def MP(q, points=1000):
@@ -125,7 +122,7 @@ def MP(q, points=1000):
     return(t,marcenko)  
 
 
-### Bouchaud et. al. (2002) filtering techique
+### Filtering techique
 def clipping_B(sample, T):
     eigval, eigvec = eigh(sample) 
     p = len(sample)
@@ -158,9 +155,8 @@ def clipping_B(sample, T):
 
 
 #######################################
-### Pruebas estadísitcas provenientes de RMT
+### Statistical test of  Onatski(2009)
 def onatski(data,k0):
-    #nota: version Onatski(2009)
     n,p = data.shape
     data1 = data.iloc[:int(n/2),:]
     data2 = data.iloc[int(n/2):,:]
@@ -169,14 +165,14 @@ def onatski(data,k0):
     WUE = pd.DataFrame((1/n)*X.conjugate().T@X) 
     eigval_WUE, eigvec_GUE = eigh(WUE)
 
-    # Estadistico R
+    # R statistics
     k1=7
     k1_k0 = k1-k0+1
     EIGS = eigval_WUE[::-1]
     index=10
     EIGENVALUES = np.zeros([index])
     for i in range(index):
-        # Nota: el resultado no cambia al variar el centrado y escalamiento
+        # R is invariant under change of scale and center
         EIGENVALUES[i] = (EIGS[i] - 2)*n**(-2/3)
 
     R = np.zeros([k1_k0])
@@ -204,7 +200,7 @@ def test_onatski(TABLA, j=0, level = 1):
     return(number)
 
 
-### Funcion para encontrar probabilidades Tracy-Widom
+###  Tracy-Widom probabilities
 def twprob(twtable, x):
     l = np.shape(twtable)[0]
     i = 0
@@ -218,7 +214,7 @@ def twprob(twtable, x):
         return(twtable[i-1,1]+(twtable[i,1] - twtable[i-1,1])*(x - twtable[i-1,0]) / (twtable[i,0]-twtable[i-1,0]))
 
 
-### Probabilidad de encontrar lambda > lambda_1 (2do orden)
+### Probability(lambda > lambda_1) (2nd order)
 def TW_Wishart_order2(p,n,twtable,lambda1,alpha):
     mu = (np.sqrt(n-0.5) + np.sqrt(p-0.5))**2
     sigma = np.sqrt(mu)*(1.0/np.sqrt(n-0.5)+1.0/np.sqrt(p-0.5))**(1./3)
@@ -238,6 +234,22 @@ def test_tw(eigval, n, alpha = 0.01):
         else:
             break
     return(k)
+
+#######################################
+### Sharpe Model
+def resto_Sharpe(returns,M):
+  dic={}
+  bs={}
+  for col in returns.columns:
+    x=returns[col]
+    lr=stats.linregress(M,x)
+    a=lr.intercept
+    b=lr.slope
+    S=x-a-b*M
+    dic[col]=S
+    bs[col]=b
+  df=pd.DataFrame(data=dic)
+  return preproceso(df),bs
     
     
     

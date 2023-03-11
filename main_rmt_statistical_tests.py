@@ -3,7 +3,7 @@
 """
 Created on Sat Dec 10 13:44:32 2022
 
-@author: andres
+@author: andres.garcia@cimat.mx
 """
 
 #######################################
@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import os
 from functions_rmt_statistical_tests import checkIfDuplicates,preproceso,imputation,\
-    clipping_B,test_tw, onatski, test_onatski, MP, axis
+    clipping_B,test_tw, onatski, test_onatski, MP, axis, resto_Sharpe
 import time
 import json
 import statsmodels.api as sm
@@ -172,13 +172,13 @@ plt.savefig(path+'/figures/fig10_Stanley2002_'+market+'.png', dpi=600, bbox_inch
 plt.figure()
 q=1/2
 t, marcenko = MP(q)
-plt.plot(t,marcenko,label='Marcenko-Pastur: q=1/2') 
+plt.plot(t,marcenko,label='q=1/2') 
 q=1/10
 t, marcenko = MP(q)
-plt.plot(t,marcenko,label='Marcenko-Pastur: q=1/10') 
+plt.plot(t,marcenko,label='q=1/10') 
 q=1/100
 t, marcenko = MP(q)
-plt.plot(t,marcenko,label='Marcenko-Pastur: q=1/100') 
+plt.plot(t,marcenko,label='q=1/100') 
 #sns.histplot(data=eigval_E[:-1],stat="density", element="step", fill=False,kde=True, label='$\lambda$')
 plt.legend()
 plt.tight_layout()
@@ -228,6 +228,7 @@ number_signals_E = []
 number_signals_tw_a1 = []
 number_signals_tw_a5 = []
 number_signals_tw_a10 = []
+TABLA_S = pd.DataFrame(columns=['null'])
 TABLA_R = pd.DataFrame(columns=['null'])
 for i in range(m):
 
@@ -238,6 +239,8 @@ for i in range(m):
     end = i*delta + n_i
 
     R_window_in = preproceso(returns.iloc[start:end, :p_i])
+    M=R_window_in.mean(axis=1)
+    S,bs=resto_Sharpe(R_window_in, M)
     if market=='sp500':
         dates_in.append(R_window_in.index[-1].strftime("%Y-%m-%d"))
     else:
@@ -260,21 +263,41 @@ for i in range(m):
         R[j] = onatski(R_window_in, j)
     R_statistics = pd.DataFrame(R, columns=[str(i)])
     TABLA_R = pd.concat([TABLA_R, R_statistics], axis=1)
+    
+    
+    # Onatski without market
+    R = np.zeros([k1_k0])
+    for j in range(k1_k0):
+      R[j] = onatski(S, j)
+    R_statistics = pd.DataFrame(R, columns=[str(i)])
+    TABLA_S = pd.concat([TABLA_S, R_statistics], axis=1)
+TABLA_S = TABLA_S.drop(columns=['null'])    
 TABLA_R = TABLA_R.drop(columns=['null'])
+
 
 
 # Number of factors
 NUMBER_FACTORS_ONATSKI_l1 = []
 NUMBER_FACTORS_ONATSKI_l5 = []
 NUMBER_FACTORS_ONATSKI_l10 = []
+NUMBER_FACTORS_ONATSKI_S_l1 = []
+NUMBER_FACTORS_ONATSKI_S_l5 = []
+NUMBER_FACTORS_ONATSKI_S_l10 = []
 for i in range(m):
     NUMBER_FACTORS_ONATSKI_l1.append(test_onatski(TABLA_R, j=i, level=1))
     NUMBER_FACTORS_ONATSKI_l5.append(test_onatski(TABLA_R,  j=i, level=5))
     NUMBER_FACTORS_ONATSKI_l10.append(test_onatski(TABLA_R,  j=i, level=10))
-
+    NUMBER_FACTORS_ONATSKI_S_l1.append(test_onatski(TABLA_S, j=i, level=1))
+    NUMBER_FACTORS_ONATSKI_S_l5.append(test_onatski(TABLA_S,  j=i, level=5))
+    NUMBER_FACTORS_ONATSKI_S_l10.append(test_onatski(TABLA_S,  j=i, level=10))
 
 number_factors = pd.DataFrame(list(zip(NUMBER_FACTORS_ONATSKI_l1, NUMBER_FACTORS_ONATSKI_l5,\
                                        NUMBER_FACTORS_ONATSKI_l10)),columns =['1%', '5%','10%'])
+    
+    
+number_factors_S = pd.DataFrame(list(zip(NUMBER_FACTORS_ONATSKI_S_l1, NUMBER_FACTORS_ONATSKI_S_l5,\
+                                       NUMBER_FACTORS_ONATSKI_S_l10)),columns =['1%', '5%','10%'])
+    
 
 number_components = pd.DataFrame(list(zip(number_signals_tw_a1, number_signals_tw_a5,\
                     number_signals_tw_a10,number_signals_E)),columns =['1%', '5%','10%','upper'])
@@ -293,6 +316,20 @@ plt.xticks(rotation=90)
 plt.grid()
 plt.legend()
 plt.savefig(path+'/figures/Number_Factors_Onatski_'+market+'_'+case+'.png', dpi=600, bbox_inches='tight')
+plt.show()
+
+# number of factors without market
+plt.figure()
+x = np.linspace(0, m-1, m)
+plt.axhline(y=k1_k0, color='r', linestyle='--')
+plt.scatter(x, number_factors_S['1%'], marker="o",label='$\\alpha = 0.01$')
+plt.scatter(x,number_factors_S['5%'], marker="^", label='$\\alpha = 0.05$')
+plt.scatter(x,number_factors_S['10%'],marker="*", label='$\\alpha = 0.10$')
+plt.xticks(np.arange(0, m, step), dates_in[::step])
+plt.xticks(rotation=90)
+plt.grid()
+plt.legend()
+plt.savefig(path+'/figures/Number_Factors_Onatski_S_'+market+'_'+case+'.png', dpi=600, bbox_inches='tight')
 plt.show()
 
 
@@ -316,6 +353,8 @@ plt.show()
 ### save files
 export_csv = TABLA_R.to_csv(path+'/files/Tabla_R_'+market+'_'+case+'.csv', header=True)
 export_csv = number_factors.to_csv(path+'/files/number_factors_'+market+'_'+case+'.csv', header=True)
+export_csv = TABLA_S.to_csv(path+'/files/Tabla_S_'+market+'_'+case+'.csv', header=True)
+export_csv = number_factors_S.to_csv(path+'/files/number_factors_S_'+market+'_'+case+'.csv', header=True)
 export_csv = number_components.to_csv(path+'/files/number_components_'+market+'_'+case+'.csv', header=True)
 
 dates = list(dates_in)
@@ -336,7 +375,7 @@ print(elapsed)
 
 
 parameters = {'market': market, 'case':case,'elapsed':elapsed,\
-              'percentage':percentage, 'start_date':start_date,\
+              'percentage':percentage, 'start_date':start_date,'end_date':end_date,\
               'q':q, 'm':m, 'step':step, 'T':T,'N':N,'p_i':p_i,\
               'n_i':n_i,'delta':delta,'k1_k0':k1_k0}
 out_file = open(path + '/files/parameters_'+str(market)+'_'+str(case)+'.json', "w") 
