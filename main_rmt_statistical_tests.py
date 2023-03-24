@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import os
 from functions_rmt_statistical_tests import checkIfDuplicates,preproceso,imputation,\
-    clipping_B,test_tw, onatski, test_onatski, MP, axis, resto_Sharpe
+    clipping_B,test_tw, onatski, test_onatski, resto_Sharpe
 import time
 import json
 import statsmodels.api as sm
