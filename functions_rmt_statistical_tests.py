@@ -58,16 +58,6 @@ def cov2corr(S):
     return(C)
 
 
-def axis(period, data):
-    dates = []
-    period = period
-    data = data
-    n = data.shape[0]
-    index = data.index.to_list()
-    for k in np.arange(0, n,period):
-        dates.append(index[k])     
-    return(n, period, dates)
-
 #### Data imputation
 
 
@@ -105,21 +95,6 @@ def imputation(close, ratio=1):
 
 #######################################
 ### Random matrix theory
-
-### Marcenko-Pastur law
-def MP(q, points=1000):
-    dmin = (1.0 - np.sqrt(q))**2
-    dmax = (1.0 + np.sqrt(q))**2
-    t = np.linspace(dmin,dmax,points)
-    marcenko = np.zeros([len(t)])
-    for i in range(len(t)):
-        x = t[i]
-        if (x < dmin or x > dmax):
-            rho = 0
-        else:   
-            rho = np.sqrt((dmax-x)*(x-dmin))/(2*np.pi*q*x)
-        marcenko[i] = rho
-    return(t,marcenko)  
 
 
 ### Filtering techique
