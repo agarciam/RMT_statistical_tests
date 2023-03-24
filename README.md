@@ -1,3 +1,5 @@
-# Market Beta is not dead: an approach from RMT
+Source code of: 
 
-Code to reproduce the results published in: ...
+"Market Beta is not dead: an approach from Random Matrix Theory" 
+
+to be published in Finance Research Letters.
